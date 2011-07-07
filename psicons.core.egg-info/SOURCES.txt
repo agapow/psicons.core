@@ -1,0 +1,12 @@
+README.txt
+setup.py
+psicons/__init__.py
+psicons.core.egg-info/PKG-INFO
+psicons.core.egg-info/SOURCES.txt
+psicons.core.egg-info/dependency_links.txt
+psicons.core.egg-info/entry_points.txt
+psicons.core.egg-info/namespace_packages.txt
+psicons.core.egg-info/not-zip-safe
+psicons.core.egg-info/requires.txt
+psicons.core.egg-info/top_level.txt
+psicons/core/__init__.py
