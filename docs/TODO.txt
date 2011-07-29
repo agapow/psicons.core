@@ -1,0 +1,26 @@
+=============
+To Do & Ideas
+=============
+
+* Commands to:
+
+	- Call library methods and classes
+	- Encapsulate raw Python code
+	- Output and save (serialise) Python objects (may need to load given libraries)
+	- Extract and report tabular data
+	- Work with numpy
+	- Transform data
+	- Interface with R?
+	- Plotting
+	
+* How to collect documentation
+
+* Project structure
+
+* Check requisite libraries
+
+* Wrap psicons into own program with auto import of core
+
+* Project structure
+
+* More and more complex examples

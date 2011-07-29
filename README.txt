@@ -2,21 +2,29 @@
 About psicons.core
 ==================
 
+.. |psicons| replace:: *psicons*
+
+
 Background
 ----------
 
 Scientific analysis can be problematic:
 
 * It may involve multiple steps, each using the results of the previous stage. Making a mistake often means repeating the whole series for safety.
+
 * Sometimes analysis chains have to be repeated on different datasets. Sometimes, even within a single analysis, the same manipulation or test has to be repeated with slightly different parameters.
-* But even immediately after the fact, it's easy to forget what was done. 9 months later when responding to a referee's report, it may be impossible.
+
+* Even immediately after the fact, it's easy to forget what was done. 9 months later when responding to a referee's report, it may be impossible.
+
 * Collaborators, clients or bosses may demand accountability.
+
 * With long but routine tasks, it's easy to get bored and make mistakes.
 
-It this light, *psicons* is a quick and dirty hack to subvert the scons build system for scientific analysis. Every stage of analysis is a command-line call to a script or executable that takes *inputs* and produces *outputs*. When scons is called, dependencies between outputs and inputs are tested and only those stages are run that are necessary to update outputs. In addition, analysis steps are documented by
-the build file. In summary, *psicons* provides:
+It this light, |psicons| is a quick and dirty hack to subvert the scons build system for scientific analysis. Every stage of analysis is a command-line call to a script or executable that takes *inputs* and produces *outputs*. When scons is called, dependencies between outputs and inputs are tested and only those stages are run that are necessary to update outputs. In addition, the exact sequence of analyses is recorded by the build file. 
 
-* Repeatability: running a build file repeats the analysis
+In summary, *psicons* provides:
+
+* Repeatability: running a build file, reruns the same analysis
 * Reproducibility: the build file (and custom scripts) document the steps of the analysis
 * Minimization of effort: if inputs or analysis steps are changed, only the necessary (dependent) steps of the analysis are rerun
 * Mistake-resistant: errors don't derail analysis due to reproducibility ("what did I do") and minimization of effort (only dependent steps are repeated)
@@ -25,33 +33,28 @@ the build file. In summary, *psicons* provides:
 Status
 ------
 
-*psicons* is very much a hack-and-see project, having been produced in the aftermath of the 2009 H1N1 pandemic from the need for complex processing of large amounts of sequence data. It is by no means
-
-, having been produced to support another
-package and see if use can be got out of generalising conversion. As such. it 
-is still an early release and the API may change. Comment is invited.
+*psicons* is very much a hack-and-see project, having been produced in the aftermath of the 2009 H1N1 pandemic from the need for complex processing of large amounts of sequence data using ad-hoc scripts and formats. It worked well in that limited role, but is still an early release exploring the approach. Functionality is limited and the API may change. There are other more developed (and more specialised) alternatives. Comment is invited.
 
 
 Installation
 ------------
 
-The simplest way to install *konval* is via ``easy_install`` [setuptools]_ or an
+The simplest way to install *psicons* is via ``easy_install`` [setuptools]_ or an
 equivalent program::
 
-	% easy_install konval
+	% easy_install psicons.core
 
 Alternatively the tarball can be downloaded, unpacked and ``setup.py`` run::
 
-	% tar zxvf konval.tgz
-	% cd konval
+	% tar zxvf psicons-core.tgz
+	% cd psicons-core
 	% python set.py install
 
-*konval* has no prerequisites and should work with just about any version of
-Python.
+*psicons* requires that scons is installed. It should work with just about any version of Python.
 
 
-Using konval
-------------
+Using psicons
+-------------
 
 A full API is included in the source distribution.
 
@@ -59,61 +62,82 @@ A full API is included in the source distribution.
 Examples
 ~~~~~~~~
 
-Most commonly, konval will be used to check or clean values. Failures result in
-exceptions being thrown::
+Psicons works just like scons. In fact, it is scons. More details are available elsewhere but briefly, you run scons like this::
 
-	# convert user input to a actual integer
-	>>> from konval import *
-	>>> sanitize ('1.0', ToInt())
-	1
-	>>> sanitize ('one', ToInt())
-	Traceback (most recent call last)
-	...
-	ValueError: can't convert 'one' to integer
+	# look for a build file called "Sconstruct" by default
+	% scons 
+	# looks for a named build file
+	% scons -f mybuildfile
+
+This causes scons to execute the build file, which is just a Python script, defining a series of tasks or *commands*::
+
+	# an scons build file
+	# some necessary administration - set up the build environment
+	env = Environment()
 	
-A single validator or list can be passed to `sanitize`. Failure in any will
-result in any exception::
+	# compile two libraries and then combine into one program
+	first_libs = Object ('hello.c', CCFLAGS='-DHELLO')
+	second_libs = Object ('goodbye.c', CCFLAGS='-DGOODBYE')
+	Program (first_libs + second_libs)
 
-	# check a list has no more than 3 members
-	>>> sanitize (['a', 'b', 'c'], [ToLength(),IsEqualOrLess(3)])
-	3
-	# check a password is long enough
-	>>> sanitize ('mypass', [ToLength(),IsEqualOrMore(8)])
-	Traceback (most recent call last)
-	...
-	ValueError: 6 is lower than 8
+The first time this file is executed, the first two commands build libraries, while the third combines the libraries into a single executable. Dependencies between the steps are automatically tracked: should one of the original source files be changed (e.g. hello.c), when the file is rerun only the steps "downstream" of it (e.g. recompilation of the first library, and the final linking) are rerun. 
 
-Any callable object that accepts and returns a single value can be used as a
-validator::
+Scons has a large number of commands for all sorts of software builds. Psicons adds two new commands, so that local scripts or external programs can be used to in a build. In this way, complex multi-step analyses can be constructed from a series of interdependent commands, that "build" intermediate data and final results::
+
+	from psicons.core import *
 	
-	>>> from string import *
-	>>> sanitize (" my title ", [strip, capitalize])
-	'My title'
+	# call a local script
+	IN_DATA = 'jg_08-10_2010.csv'
+	CLEAN_DATA = 'jg_08-10_2010-cleaned.csv'
+	make_clean_data = Script ('clean_seqs.py',
+		args = ['--save-as', CLEAN_DATA],
+		infiles = [IN_DATA],
+		output = CLEAN_DATA,
+	)
+	
+	# call an external command
+	EPI_DATA = 'jg-types.txt'
+	RESULT_DATA = 'results.tab'
+	type_data = External ('treemaker',
+		args = ['--save-as', RESULT_DATA],
+		infiles = [CLEAN_DATA, EPI_DATA],
+		output = [RESULT_DATA],
+	)
 
-A rich library of prebuilt validators is supplied::
+The interfaces of these two commands are similar:
 
-	>>> sanitize ('abcde', IsNonblank())
-	'abcde'
-	>>> sanitize (5, IsInRange(1,6))
-	5
-	>>> sanitize ('foo', Synonyms({'foo': 'bar', 'baz': 'quux'}))
-	'bar'
+* what is being called?
+* what inputs does it use (depend on)?
+* what outputs does it produce?
 
-Custom validators can easily be subclassed from a supplied base class::
+When scons is run on this build file, it calls the script 'clean_seqs.py' on `IN_DATA` to produce `CLEAN_DATA`. Then the external program `treemaker` is called
+on `CLEAN_DATA` and `EPI_DATA` to produce `RESULT_DATA`. Should `EPI_DATA` be edited, when scons is called again, only the second external step will be run again as the
+first step and it's results is still up to date. Thus:
 
-	class IsFoo (BaseValidator):
-		def validate_value (self, value):
-			if value != 'foo':
-				self.raise_validation_error (value)
-			return True
+* Analyses may be run (and rerun) easily
+* If data changes (or scripts change - bug fixes), only the necessary steps are rerun
+* The actions taken are recorded in the build file
+
+To ease renaming intermediate or output files in a rational way, *psicons* offers a few utility functions for interpolating file names from parameters. To illustrate::
+
+	# generate a new string from a template
+	>>> d = {'foo': '123', 'bar': '456'}
+	>>> interpolate ('ab{foo}cd{bar}ef', d)
+	'ab123cd456ef'
+	# name new file name from old by adding suffix to name 
+	>>> interpolate_from_path ('mydata.csv', '{stem}-cleaned{ext}')
+	'mydata-cleaned.csv'
 
 
 Limitations
 -----------
 
-Certainly, far, far more complicated reproducibility tools are out there (see `here <http://csdl2.computer.org/comp/mags/cs/2009/01/mcs2009010005.pdf>__`) but many are based around certain disciplines (e.g. geophysics, computational math) or require working through web interfaces or using very standard sets of analysis tools. *psicons* is written from the point of view of a bioinformatician doing sequence
-and phylogenetic analysis, working on the commandline using a lot of custom scripts and an endlessly changing lineup of supplied tools. As sometimes happens, other tools didn't fit, so I wrote one that did. It's served well in a limited
-role. However, the API and future direction is completely up for grabs.
+Certainly, far, far more complicated reproducibility tools are out there (see `here <http://csdl2.computer.org/comp/mags/cs/2009/01/mcs2009010005.pdf>`__) but many are based around certain disciplines (e.g. geophysics, computational math), require working through web interfaces or using very standard sets of analysis tools. *psicons* is written from the point of view of a bioinformatician doing sequence
+and phylogenetic analysis, working on the commandline using a lot of custom scripts and an endlessly changing lineup of supplied tools. As sometimes happens, other tools didn't fit, so I wrote one that did. 
+
+As with many quick hack tools, documentation is currently a bit thin.
+
+Clearly, a set of standard tools for extracting, transforming and plotting data would be a powerful addition to *psicons*. This doesn't exist as yet.
 
 
 Credit
@@ -121,24 +145,22 @@ Credit
 
 Thanks to the architects of Scons, of course.
 
-While this project was started before encountering Madagascar, it has inevitably
-shaped development. It's a remarkably powerful system, although ill-suited to
-my current purposes. You should check it out.
+While this project was started before encountering Madagascar [madagascar]_, it has inevitably shaped development. It's a remarkably powerful system, although ill-suited to my current purposes. You should check it out.
 
 
 References
 ----------
 
-.. [konval-home] `konval home page <http://www.agapow.net/software/py-konval>`__
+.. [psicons-home] `psicons home page <http://www.agapow.net/software/psicons-core>`__
 
-.. [konval-pypi] `konval on PyPi <http://pypi.python.org/pypi/konval>`__
+.. [psicons-pypi] `psicons on PyPi <http://pypi.python.org/pypi/psicons-core>`__
 
 .. [setuptools] `Setuptools & easy_install <http://packages.python.org/distribute/easy_install.html>`__
 
-.. [konval-github] `konval on github <https://github.com/agapow/py-konval>`__
+.. [psicons-github] `psicons on github <https://github.com/agapow/psicons.core>`__
 
-.. [formencode] `FormEncode <http://formencode.org>`__
+.. [scons] `Scons <http://www.scons.org>`__
 
-
+.. [madagascar] `Madagscar and Scons for reproducibility <http://reproducibility.org/wiki/Reproducible_computational_experiments_using_SCons>`__
 
 
