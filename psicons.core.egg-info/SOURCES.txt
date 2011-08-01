@@ -10,3 +10,6 @@ psicons.core.egg-info/not-zip-safe
 psicons.core.egg-info/requires.txt
 psicons.core.egg-info/top_level.txt
 psicons/core/__init__.py
+psicons/core/commands.py
+psicons/core/impl.py
+psicons/core/utils.py

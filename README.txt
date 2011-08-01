@@ -131,7 +131,7 @@ results::
 	# call a local script
 	IN_DATA = 'jg_08-10_2010.csv'
 	CLEAN_DATA = 'jg_08-10_2010-cleaned.csv'
-	make_clean_data = env.Script ('clean_seqs.py',
+	make_clean_data = Script (env, 'clean_seqs.py',
 		args = ['--save-as', CLEAN_DATA],
 		infiles = [IN_DATA],
 		output = CLEAN_DATA,
@@ -140,7 +140,7 @@ results::
 	# call an external command
 	EPI_DATA = 'jg-types.txt'
 	RESULT_DATA = 'results.tab'
-	type_data = env.External ('treemaker',
+	type_data = External (env, 'treemaker',
 		args = ['--save-as', RESULT_DATA],
 		infiles = [CLEAN_DATA, EPI_DATA],
 		output = [RESULT_DATA],
@@ -199,6 +199,12 @@ The need for a modified scons installation is a blemish. Future versions of
 Clearly, a set of standard tools for extracting, transforming and plotting 
 data would be a powerful addition to *psicons*. This doesn't exist as yet.
 
+The process of installing a new tool or module for use by SCons is fiddly
+[scons-tools]_, involves copying libraries in a tool directory, registering 
+their use in build files, voids the ease of using ``easy_install`` and makes 
+development a pain. Thus, the additional "commands" are real scons commands, so
+much as functions that generate commands. But they are easy to use.
+
 
 Credit
 ------
@@ -208,6 +214,9 @@ Thanks to the architects of Scons, of course.
 While this project was started before encountering Madagascar [madagascar]_, it 
 has inevitably shaped development. It's a remarkably powerful system, although 
 ill-suited to my current purposes. You should check it out.
+
+Only when writing this document did I become aware of sconstools [sconstools]_,
+which seems to be following exactly the same direction as |psicons|.
 
 
 References
@@ -225,4 +234,7 @@ References
 
 .. [madagascar] `Madagscar and Scons for reproducibility <http://reproducibility.org/wiki/Reproducible_computational_experiments_using_SCons>`__
 
+.. [scons-custom] `Where To Put Your Custom Builders and Tools <http://scons.org/doc/production/HTML/scons-user/x3697.html>`__
+
+.. [sconstools] `Sconstools <http://code.google.com/p/sconstools/>`__
 

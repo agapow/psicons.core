@@ -2,6 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 New scons commands.
+
+The process of installing a new tool or module for use by SCons is fiddly, 
+involves copying libraries in a tool directory, registering 
+their use in build files, voids the ease of using ``easy_install`` and makes 
+development a pain. Thus, these additional "commands" are real scons commands, so
+much as functions that generate commands. But they are easy to use.
+
+
 """
 
 __docformat__ = 'restructuredtext en'
@@ -14,10 +22,6 @@ import impl
 
 ### CONSTANTS & DEFINES ###
 
-from SCons.Environment import Environment as SconsEnv
-from SCons.Util import AddMethod
-
-
 ### IMPLEMENTATION ###	
 
 def External (env, exe, args=[], infiles=[], output=[], depends=[],
@@ -26,6 +30,8 @@ def External (env, exe, args=[], infiles=[], output=[], depends=[],
 	Create a task for doing analysis with an external (fixed) program.
 	
 	:Parameters:
+		env : Environment
+			The environment created for the build
 		exe : str
 			name of executable to be called
 		args : str or list
@@ -65,8 +71,6 @@ def External (env, exe, args=[], infiles=[], output=[], depends=[],
 	depends = depends + infiles
 	env.Depends (new_command, depends)
 	return new_command
-
-AddMethod(SconsEnv, External)
 
 
 
@@ -128,7 +132,6 @@ def Script (env, path, interpreter=None, args=[], infiles=[], output=[],
 	env.Depends (new_command, depends)
 	return new_command
 
-AddMethod(SconsEnv, External)
 
 
 ## DEBUG & TEST ###

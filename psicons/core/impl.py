@@ -12,12 +12,9 @@ __docformat__ = 'restructuredtext en'
 
 ### IMPORTS ###
 
-# due to the weirdness of importing SCons, we do it here
-# XXX: got to be a better way
-import SCons as scons_lib
+import types
 
 __all__ = [
-	'scons_lib',
 	'make_list',
 ]
 
