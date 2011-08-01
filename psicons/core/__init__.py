@@ -3,7 +3,7 @@
 """
 A hack to subvert the scons build system for scientific analysis.
 
-Psicons allows scripts and external programs for analysis to be incorprated into
+Psicons allows scripts and external programs for analysis to be incorporated into
 a build procedure.  Every stage of analysis is a command-line call to a script
 or executable that takes *inputs* and produces *outputs*. When scons is called, 
 dependencies between outputs and inputs are tested and only those stages are run
@@ -12,6 +12,8 @@ analyses recorded by the build file.
 """
 
 __docformat__ = 'restructuredtext en'
+__version__ = '0.1'
+__author__ = "Paul-Michael Agapow (pma@agapow.net)"
 
 
 ### IMPORTS ###

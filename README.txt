@@ -10,37 +10,59 @@ Background
 
 Scientific analysis can be problematic:
 
-* It may involve multiple steps, each using the results of the previous stage. Making a mistake often means repeating the whole series for safety.
+* It may involve multiple steps, each using the results of the previous stage. 
+  Making a mistake often means repeating the whole series for safety.
 
-* Sometimes analysis chains have to be repeated on different datasets. Sometimes, even within a single analysis, the same manipulation or test has to be repeated with slightly different parameters.
+* Sometimes analysis chains have to be repeated on different datasets.
+  Sometimes, even within a single analysis, the same manipulation or test has
+  to be repeated with slightly different parameters.
 
-* Even immediately after the fact, it's easy to forget what was done. 9 months later when responding to a referee's report, it may be impossible.
+* Even immediately after the fact, it's easy to forget what was done. 9 months
+  later when responding to a referee's report, it may be impossible.
 
 * Collaborators, clients or bosses may demand accountability.
 
 * With long but routine tasks, it's easy to get bored and make mistakes.
 
-It this light, |psicons| is a quick and dirty hack to subvert the scons build system for scientific analysis. Every stage of analysis is a command-line call to a script or executable that takes *inputs* and produces *outputs*. When scons is called, dependencies between outputs and inputs are tested and only those stages are run that are necessary to update outputs. In addition, the exact sequence of analyses is recorded by the build file. 
+It this light, |psicons| is a quick and dirty hack to subvert the scons build 
+system for scientific analysis. Every stage of analysis is a command-line call 
+to a script or executable that takes *inputs* and produces *outputs*. When 
+scons is called, dependencies between outputs and inputs are tested and only 
+those stages are run that are necessary to update outputs. In addition, the 
+exact sequence of analyses is recorded by the build file. 
 
-In summary, *psicons* provides:
+In summary, |psicons| provides:
 
 * Repeatability: running a build file, reruns the same analysis
-* Reproducibility: the build file (and custom scripts) document the steps of the analysis
-* Minimization of effort: if inputs or analysis steps are changed, only the necessary (dependent) steps of the analysis are rerun
-* Mistake-resistant: errors don't derail analysis due to reproducibility ("what did I do") and minimization of effort (only dependent steps are repeated)
+
+* Reproducibility: the build file (and custom scripts) document the steps of 
+  the analysis
+* Minimization of effort: if inputs or analysis steps are changed, only the 
+  necessary (dependent) steps of the analysis are rerun
+  
+* Mistake-resistant: errors don't derail analysis due to reproducibility ("what 
+  did I do") and minimization of effort (only dependent steps are repeated)
+
+* Programmability: analysis tasks may be constructed with programatically
+  ("repeat the analysis across this parameter range")
 
 
 Status
 ------
 
-*psicons* is very much a hack-and-see project, having been produced in the aftermath of the 2009 H1N1 pandemic from the need for complex processing of large amounts of sequence data using ad-hoc scripts and formats. It worked well in that limited role, but is still an early release exploring the approach. Functionality is limited and the API may change. There are other more developed (and more specialised) alternatives. Comment is invited.
+*psicons* is very much a hack-and-see project, having been produced in the 
+aftermath of the 2009 H1N1 pandemic from the need for complex processing of 
+large amounts of sequence data using ad-hoc scripts and formats. It worked 
+well in that limited role, but is still an early release exploring the 
+approach. Functionality is limited and the API may change. There are other 
+more developed (and more specialised) alternatives. Comment is invited.
 
 
 Installation
 ------------
 
-The simplest way to install *psicons* is via ``easy_install`` [setuptools]_ or an
-equivalent program::
+The simplest way to install *psicons* is via ``easy_install`` [setuptools]_ or 
+an equivalent program::
 
 	% easy_install psicons.core
 
@@ -50,7 +72,15 @@ Alternatively the tarball can be downloaded, unpacked and ``setup.py`` run::
 	% cd psicons-core
 	% python set.py install
 
-*psicons* requires that scons is installed. It should work with just about any version of Python.
+It should work with just about any  version of Python.
+
+*psicons* requires that scons is installed, which is where things get tricky.
+Scons by default installs itself in a sandboxed way with multiple versions
+living side-by-side and thus being non-importable. Of course, |psicons| needs
+to use the scons library, so a conventional installation must be forced. 
+Download the scons tarball, unpack it and install it like thus::
+
+	% python setup.py install --standard-lib
 
 
 Using psicons
@@ -62,34 +92,46 @@ A full API is included in the source distribution.
 Examples
 ~~~~~~~~
 
-Psicons works just like scons. In fact, it is scons. More details are available elsewhere but briefly, you run scons like this::
+Psicons works just like scons. In fact, it is scons. More details are available 
+elsewhere but briefly, you run scons like this::
 
 	# look for a build file called "Sconstruct" by default
 	% scons 
 	# looks for a named build file
 	% scons -f mybuildfile
 
-This causes scons to execute the build file, which is just a Python script, defining a series of tasks or *commands*::
+This causes scons to execute the build file, which is just a Python script, 
+defining a series of tasks or *commands*::
 
 	# an scons build file
 	# some necessary administration - set up the build environment
 	env = Environment()
 	
 	# compile two libraries and then combine into one program
-	first_libs = Object ('hello.c', CCFLAGS='-DHELLO')
-	second_libs = Object ('goodbye.c', CCFLAGS='-DGOODBYE')
-	Program (first_libs + second_libs)
+	first_libs = env.Object ('hello.c', CCFLAGS='-DHELLO')
+	second_libs = env.Object ('goodbye.c', CCFLAGS='-DGOODBYE')
+	env.Program (first_libs + second_libs)
 
-The first time this file is executed, the first two commands build libraries, while the third combines the libraries into a single executable. Dependencies between the steps are automatically tracked: should one of the original source files be changed (e.g. hello.c), when the file is rerun only the steps "downstream" of it (e.g. recompilation of the first library, and the final linking) are rerun. 
+The first time this file is executed, the first two commands build libraries, 
+while the third combines the libraries into a single executable. Dependencies 
+between the steps are automatically tracked: should one of the original source 
+files be changed (e.g. hello.c), when the file is rerun only the steps 
+"downstream" of it (e.g. recompilation of the first library, and the final 
+linking) are rerun. 
 
-Scons has a large number of commands for all sorts of software builds. Psicons adds two new commands, so that local scripts or external programs can be used to in a build. In this way, complex multi-step analyses can be constructed from a series of interdependent commands, that "build" intermediate data and final results::
+Scons has a large number of commands for all sorts of software builds. Psicons 
+adds two new commands, so that local scripts or external programs can be used 
+to in a build. In this way, complex multi-step analyses can be constructed from 
+a series of interdependent commands, that "build" intermediate data and final 
+results::
 
 	from psicons.core import *
+	env = Environment()
 	
 	# call a local script
 	IN_DATA = 'jg_08-10_2010.csv'
 	CLEAN_DATA = 'jg_08-10_2010-cleaned.csv'
-	make_clean_data = Script ('clean_seqs.py',
+	make_clean_data = env.Script ('clean_seqs.py',
 		args = ['--save-as', CLEAN_DATA],
 		infiles = [IN_DATA],
 		output = CLEAN_DATA,
@@ -98,7 +140,7 @@ Scons has a large number of commands for all sorts of software builds. Psicons a
 	# call an external command
 	EPI_DATA = 'jg-types.txt'
 	RESULT_DATA = 'results.tab'
-	type_data = External ('treemaker',
+	type_data = env.External ('treemaker',
 		args = ['--save-as', RESULT_DATA],
 		infiles = [CLEAN_DATA, EPI_DATA],
 		output = [RESULT_DATA],
@@ -110,15 +152,23 @@ The interfaces of these two commands are similar:
 * what inputs does it use (depend on)?
 * what outputs does it produce?
 
-When scons is run on this build file, it calls the script 'clean_seqs.py' on `IN_DATA` to produce `CLEAN_DATA`. Then the external program `treemaker` is called
-on `CLEAN_DATA` and `EPI_DATA` to produce `RESULT_DATA`. Should `EPI_DATA` be edited, when scons is called again, only the second external step will be run again as the
-first step and it's results is still up to date. Thus:
+When scons is run on this build file, it calls the script 'clean_seqs.py' on 
+`IN_DATA` to produce `CLEAN_DATA`. Then the external program `treemaker` is 
+called on `CLEAN_DATA` and `EPI_DATA` to produce `RESULT_DATA`. Should 
+`EPI_DATA` be edited, when scons is called again, only the second external 
+step will be run again as the first step and it's results is still up to date. 
+Thus:
 
 * Analyses may be run (and rerun) easily
-* If data changes (or scripts change - bug fixes), only the necessary steps are rerun
+
+* If data changes (or scripts change - bug fixes), only the necessary steps are 
+  rerun
+  
 * The actions taken are recorded in the build file
 
-To ease renaming intermediate or output files in a rational way, *psicons* offers a few utility functions for interpolating file names from parameters. To illustrate::
+To ease renaming intermediate or output files in a rational way, *psicons* 
+offers a few utility functions for interpolating file names from parameters. To 
+illustrate::
 
 	# generate a new string from a template
 	>>> d = {'foo': '123', 'bar': '456'}
@@ -132,12 +182,22 @@ To ease renaming intermediate or output files in a rational way, *psicons* offer
 Limitations
 -----------
 
-Certainly, far, far more complicated reproducibility tools are out there (see `here <http://csdl2.computer.org/comp/mags/cs/2009/01/mcs2009010005.pdf>`__) but many are based around certain disciplines (e.g. geophysics, computational math), require working through web interfaces or using very standard sets of analysis tools. *psicons* is written from the point of view of a bioinformatician doing sequence
-and phylogenetic analysis, working on the commandline using a lot of custom scripts and an endlessly changing lineup of supplied tools. As sometimes happens, other tools didn't fit, so I wrote one that did. 
+Certainly, far, far more complicated reproducibility tools are out there (see `
+here <http://csdl2.computer.org/comp/mags/cs/2009/01/mcs2009010005.pdf>`__) but 
+many are based around certain disciplines (e.g. geophysics, computational math), 
+require working through web interfaces or using very standard sets of analysis 
+tools. *psicons* is written from the point of view of a bioinformatician doing 
+sequence and phylogenetic analysis, working on the commandline using a lot of 
+custom scripts and an endlessly changing lineup of supplied tools. As sometimes 
+happens, other tools didn't fit, so I wrote one that did. 
 
 As with many quick hack tools, documentation is currently a bit thin.
 
-Clearly, a set of standard tools for extracting, transforming and plotting data would be a powerful addition to *psicons*. This doesn't exist as yet.
+The need for a modified scons installation is a blemish. Future versions of
+|psicons| may need to directly incorporate scons for ease of installation.
+
+Clearly, a set of standard tools for extracting, transforming and plotting 
+data would be a powerful addition to *psicons*. This doesn't exist as yet.
 
 
 Credit
@@ -145,7 +205,9 @@ Credit
 
 Thanks to the architects of Scons, of course.
 
-While this project was started before encountering Madagascar [madagascar]_, it has inevitably shaped development. It's a remarkably powerful system, although ill-suited to my current purposes. You should check it out.
+While this project was started before encountering Madagascar [madagascar]_, it 
+has inevitably shaped development. It's a remarkably powerful system, although 
+ill-suited to my current purposes. You should check it out.
 
 
 References

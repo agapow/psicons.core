@@ -10,14 +10,18 @@ __docformat__ = 'restructuredtext en'
 ### IMPORTS ###
 
 import impl
-Command = impl.scons_lib.Environment.Command
 
 
 ### CONSTANTS & DEFINES ###
 
+from SCons.Environment import Environment as SconsEnv
+from SCons.Util import AddMethod
+
+
 ### IMPLEMENTATION ###	
 
-def External (exe, args=[], infiles=[], output=[], depends=[]):
+def External (env, exe, args=[], infiles=[], output=[], depends=[],
+		capture_stdout=None):
 	"""
 	Create a task for doing analysis with an external (fixed) program.
 	
@@ -25,19 +29,25 @@ def External (exe, args=[], infiles=[], output=[], depends=[]):
 		exe : str
 			name of executable to be called
 		args : str or list
-			either a string giving the whole string that is used to pass arguments
-			to the executable or a list of srtrings that can be joined to do the
-			same.
+			either a string that is used to pass arguments to the executable 
+			(e.g. ``"--foo 5 -t one.txt"``) or a list of strings that can be joined to
+			do the same (e.g. ``["--foo", "5", "-t", "one.txt"]``).
 		infiles : str or list
 			a string or list of strings giving the paths of the files that this
 			task depends on. 
-		outputs : str or list
+		output : str or list
 			a string or list of strings giving the paths of the files that this
 			task produces.
+		capture_stdout : None or str
+			Record the output of the tool. If a string is provided, this will be
+			used as the path of the file to save it in.
 	
-	This is a command that runs a local script, 
+	This is a command that runs an executable, intended for processing input
+	datafiles to output data files. It calls the named executable with the
+	passed arguments. Infiles and any others listed in `depends` are recorded
+	as dependencies. outfiles and the captured output are listed as outputs.
+	These will be used in dependency tracking.
 	
-		
 	"""
 	# TODO: should be "outputs"?
 	infiles = impl.make_list (infiles or [])
@@ -47,22 +57,52 @@ def External (exe, args=[], infiles=[], output=[], depends=[]):
 		'infiles': ' '.join (infiles)
 	}
 	output = impl.make_list (output or [])
-	new_command = Command (
+	new_command = env.Command (
 		output,
 		infiles,
 		cmdline,
 	)
 	depends = depends + infiles
-	Depends (new_command, depends)
+	env.Depends (new_command, depends)
 	return new_command
 
+AddMethod(SconsEnv, External)
 
-def Script (path, interpreter=None, args=[], infiles=[], output=[], depends=[],
-		capture_stdout=None):
+
+
+def Script (env, path, interpreter=None, args=[], infiles=[], output=[], 
+		depends=[], capture_stdout=None):
 	"""
 	Create a task for running a local script.
 	
-	This is a command that runs a local script, 
+	:Parameters:
+		path : str
+			Pathway to the script
+		interpreter
+			Interpreter to run the script with. If None, assume it is python.
+			
+		
+
+	This is a command that runs a local script, intended for processing input
+	datafiles to output data files. It work like `External`, except that the 
+	script itself is made a dependency for this step. Thus ,alterations in the
+	script will trigger rerunning. All undescribed parameters are as per `External`.
+	
+	For example::
+	
+		>>> env = SconsEnv()
+		>>> make_clean_data = Script ('Scripts/clean.py',
+			...	args = ['--save-as', 'output.txt'],
+			...	infiles = ['indata.txt'],
+			...	output = 'output.txt',
+		...	)
+		>>> type_data = Script ('count_types.pl',
+		...		interpreter = 'perl',
+		...		args = ['--use-types', 'type_data.csv'],
+		...		infiles = ['clean_data.txt'],
+		...		depends = 'type_config.txt',
+		...		capture_stdout='captured-types.txt',
+		...	)
 	
 	"""
 	interpreter = interpreter or '$PY'
@@ -79,14 +119,16 @@ def Script (path, interpreter=None, args=[], infiles=[], output=[], depends=[],
 	if capture_stdout:
 		cmdline = ' '.join ([cmdline, '>', capture_stdout])
 		output.append (capture_stdout)
-	new_command = Command (
+	new_command = env.Command (
 		output,
 		[path] + infiles,
 		cmdline,
 	)
 	depends = depends + infiles
-	Depends (new_command, depends)
+	env.Depends (new_command, depends)
 	return new_command
+
+AddMethod(SconsEnv, External)
 
 
 ## DEBUG & TEST ###

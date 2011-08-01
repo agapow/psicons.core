@@ -12,7 +12,8 @@ __docformat__ = 'restructuredtext en'
 
 ### IMPORTS ###
 
-# due to the wierdness of importing SCons, we do it here
+# due to the weirdness of importing SCons, we do it here
+# XXX: got to be a better way
 import SCons as scons_lib
 
 __all__ = [
