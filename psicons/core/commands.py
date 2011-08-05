@@ -22,7 +22,104 @@ import impl
 
 ### CONSTANTS & DEFINES ###
 
+INPUT_SUB_STRS = ['input %s', 'input-%s', 'input[%s]']
+
+OUTPUT_SUB_STRS = ['output %s', 'output-%s', 'output[%s]']
+
+
 ### IMPLEMENTATION ###	
+
+def Cline (env, cline, inputs=[], outputs=[], capture_stdout=None):
+	"""
+	Create a task for doing analysis with an external (fixed) program.
+	
+	:Parameters:
+		env : Environment
+			The environment created for the build
+		cline : str or list
+			either the commandline to be called or a list of strings that can be
+			joined to do the same (e.g. ``["--foo", "5", "-t", "one.txt"]``). The
+			string is trimmed, newlines removed, and substitutions
+			removed before using.
+		inputs : str or list
+			a string or list of strings giving the paths of the files that this
+			task depends on. This will be substituted into the commandline.
+		outputs : str or list
+			a string or list of strings giving the paths of the files that this
+			task produces. This will be substituted into the commandline.
+		capture_stdout : None or str
+			Record the output of the tool. If a string is provided, this will be
+			used as the path of the file to save it in.
+	
+	This is a command that runs a commandline, intended for processing input
+	datafiles to output data files. It calls the named executable with the
+	passed arguments. Infiles and any others listed in `depends` are recorded
+	as dependencies. outfiles and the captured output are listed as outputs.
+	These will be used in dependency tracking.
+	
+	"""
+	## Preconditions:
+	if isinstance (inputs, basestring):
+		inputs = [inputs]
+	if isinstance (outputs, basestring):
+		outputs = [outputs]
+		
+		
+	# build commandline
+	if not isinstance (cline, basestring):
+		# assume sequence, and join together stripped components
+		# XXX: use a regex to clean up?
+		cline = ' '.join ([c.strip() for x in cline])
+	# cleanup string - probably unnecessary, but allows cline components to be
+	# pretty-printed over multiple lines
+	cline = ' '.join (cline.strip().split('\n'))
+	
+	# build substitution dictionary
+	subs = {}
+	if isinstance (inputs, dict):
+		subs.update (inputs)
+		input_list = inputs.values()
+	else:
+		for i, f in enumerate (inputs):
+			for s in INPUT_SUB_STRS:
+				subs[s % i] = f
+		input_list = list(inputs)
+	if isinstance (outputs, dict):
+		subs.update (outputs)
+		output_list = outputs.values()
+	else:
+		for i, f in enumerate (outputs):
+			for s in OUTPUT_SUB_STRS:
+				subs[s % i] = f
+		output_list = list(outputs)	
+	
+	# build cline with substitutions
+	subbed_cline = cline % subs
+	
+	if capture_stdout:
+		cline = ' '.join ([cmdline, '>', capture_stdout])
+		output_list.append (capture_stdout)
+	
+	# actually make command
+	new_command = env.Command (
+		output_list,
+		input_list,
+		subbed_cline,
+	)
+	depends = depends + input_list
+	env.Depends (new_command, depends)
+	return new_command
+
+
+register (Cline)
+
+# external calls
+# Cline (env, [exe] + make_list(args), inputs=[], outputs=[], capture_stdout=None)
+# scripts calls
+# Cline (env, [interp, script] + make_list(args), inputs=[], outputs=[], depends=[scitps],
+# capture_stdout=None)
+
+
 
 def External (env, exe, args=[], infiles=[], output=[], depends=[],
 		capture_stdout=None):
@@ -71,6 +168,9 @@ def External (env, exe, args=[], infiles=[], output=[], depends=[],
 	depends = depends + infiles
 	env.Depends (new_command, depends)
 	return new_command
+
+
+register (External)
 
 
 
@@ -131,6 +231,15 @@ def Script (env, path, interpreter=None, args=[], infiles=[], output=[],
 	depends = depends + infiles
 	env.Depends (new_command, depends)
 	return new_command
+
+
+register (Script)
+
+def Final (env, f):
+	pass
+
+
+register (Cline, Script, External, File)
 
 
 
